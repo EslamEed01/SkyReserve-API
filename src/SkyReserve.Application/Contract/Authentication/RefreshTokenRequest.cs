@@ -1,0 +1,7 @@
+﻿namespace SkyReserve.Application.Contract.Authentication
+{
+    public record RefreshTokenRequest(
+    string Token,
+    string RefreshToken
+ );
+}

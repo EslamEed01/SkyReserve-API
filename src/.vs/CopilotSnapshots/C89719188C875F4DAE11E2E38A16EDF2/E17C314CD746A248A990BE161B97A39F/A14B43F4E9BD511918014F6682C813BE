@@ -1,0 +1,579 @@
+﻿# SkyReserve API ??
+
+A comprehensive flight booking and reservation system built with .NET 9, implementing Clean Architecture principles and modern development practices.
+
+## ?? Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Configuration](#configuration)
+- [API Documentation](#api-documentation)
+- [Database Schema](#database-schema)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+## ?? Overview
+
+SkyReserve is a modern flight booking API that provides a complete solution for airline reservation systems. It offers robust features for flight management, user authentication, booking operations, payment processing, and real-time notifications.
+
+## ? Features
+
+### Core Features
+- **Flight Management**: Search, filter, and manage flight schedules
+- **User Authentication**: JWT-based authentication with Google OAuth integration
+- **Booking System**: Complete flight reservation and booking management
+- **Payment Processing**: Secure payment handling via Stripe integration
+- **User Management**: Comprehensive user and role management system
+- **Passenger Management**: Handle multiple passengers per booking
+- **Review System**: Flight rating and review functionality
+
+### Advanced Features
+- **Real-time Search**: Elasticsearch-powered flight search
+- **Notifications**: Multi-channel notifications (Email via AWS SES, SMS via Twilio)
+- **Caching**: Redis-based caching for improved performance
+- **Background Processing**: AWS SQS for asynchronous task processing
+- **Calendar Integration**: Google Calendar integration for booking management
+- **Audit & Logging**: Comprehensive logging and query monitoring
+
+## ??? Architecture
+
+The project follows **Clean Architecture** principles with clear separation of concerns:
+
+```
+src/
+??? SkyReserve.Domain/          # Core business entities and logic
+??? SkyReserve.Application/     # Application services and DTOs
+??? SkyReserve.Infrastructure/  # External concerns (DB, APIs, etc.)
+??? SkyReserve.API/            # Web API controllers and configuration
+??? SkyReserve.Test/           # Unit and integration tests
+```
+
+### Design Patterns
+- **Repository Pattern**: Data access abstraction
+- **CQRS with MediatR**: Command and Query separation for scalable operations
+- **Dependency Injection**: Loose coupling between components
+- **Options Pattern**: Configuration management
+- **Factory Pattern**: For creating notification delivery services
+- **Specification Pattern**: For complex query logic
+
+## ??? Tech Stack
+
+### Core Framework
+- **.NET 9**: Latest version of .NET
+- **ASP.NET Core Web API**: RESTful API framework
+- **Entity Framework Core**: ORM for database operations
+- **AutoMapper**: Object-to-object mapping
+- **FluentValidation**: Input validation
+- **MediatR**: Mediator pattern implementation
+
+### Database & Caching
+- **PostgreSQL**: Primary database
+- **Redis**: Distributed caching and session management
+- **Elasticsearch**: Search and analytics engine
+
+### External Services
+- **Stripe**: Payment processing
+- **AWS SES**: Email notifications
+- **AWS SQS**: Message queuing
+- **Twilio**: SMS notifications
+- **Google OAuth**: Authentication
+- **Google Calendar**: Calendar integration
+
+### Development Tools
+- **Swagger/OpenAPI**: API documentation
+- **xUnit**: Testing framework
+- **Dapper**: Micro ORM for performance-critical operations
+
+## ?? Getting Started
+
+### Prerequisites
+
+- **.NET 9 SDK**
+- **PostgreSQL** (14+)
+- **Redis** (6+)
+- **Elasticsearch** (8+)
+- **Visual Studio 2022** or **VS Code**
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/EslamEed01/SkyReserve.git
+   cd SkyReserve/src
+   ```
+
+2. **Restore packages**
+   ```bash
+   dotnet restore
+   ```
+
+3. **Set up User Secrets** (Development)
+   ```bash
+   cd SkyReserve.API
+   dotnet user-secrets init
+   ```
+
+## 🏗️ CQRS with MediatR Architecture
+
+SkyReserve implements the **Command Query Responsibility Segregation (CQRS)** pattern using **MediatR** to achieve clean separation between read and write operations, improved performance, and better maintainability.
+
+### 📋 Architecture Overview
+
+```
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│   🌐 Controllers    │ -> │   📡 MediatR        │ -> │   💼 Handlers       │
+│   • REST Endpoints │    │   • Request Router  │    │   • Commands        │
+│   • Input Validation│    │   • Mediator Pattern│    │   • Queries         │
+│   • Response Format │    │   • Pipeline        │    │   • Business Logic  │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+                                      │                           │
+                                      ▼                           ▼
+                           ┌─────────────────────┐    ┌─────────────────────┐
+                           │   🔧 Behaviors      │    │   🗄️ Data Layer     │
+                           │   • Validation      │    │   • Repository      │
+                           │   • Logging         │    │   • Entity Framework│
+                           │   • Caching         │    │   • Database        │
+                           │   • Performance     │    │   • External APIs   │
+                           └─────────────────────┘    └─────────────────────┘
+```
+
+### 🎯 Command vs Query Separation
+
+#### Commands (Write Operations)
+Commands are responsible for changing system state and typically don't return data:
+
+```csharp
+// Example: Create Flight Booking Command
+public record CreateBookingCommand(
+    string UserId,
+    int FlightId,
+    List<PassengerDto> Passengers,
+    string PaymentMethodId
+) : IRequest<BookingResult>;
+
+// Command Handler
+public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand, BookingResult>
+{
+    private readonly IBookingRepository _bookingRepository;
+    private readonly IPaymentService _paymentService;
+    private readonly INotificationService _notificationService;
+
+    public async Task<BookingResult> Handle(CreateBookingCommand request, CancellationToken cancellationToken)
+    {
+        // Business logic for creating booking
+        // Payment processing
+        // Notification triggers
+        return result;
+    }
+}
+```
+
+#### Queries (Read Operations)
+Queries are optimized for data retrieval and don't modify system state:
+
+```csharp
+// Example: Search Flights Query
+public record SearchFlightsQuery(
+    string? Origin,
+    string? Destination,
+    DateTime? DepartureDate,
+    DateTime? ReturnDate,
+    int Passengers
+) : IRequest<PagedResult<FlightSearchDto>>;
+
+// Query Handler
+public class SearchFlightsQueryHandler : IRequestHandler<SearchFlightsQuery, PagedResult<FlightSearchDto>>
+{
+    private readonly IFlightRepository _flightRepository;
+    private readonly IElasticsearchService _searchService;
+
+    public async Task<PagedResult<FlightSearchDto>> Handle(SearchFlightsQuery request, CancellationToken cancellationToken)
+    {
+        // Optimized read operations
+        // Elasticsearch integration
+        // Caching strategies
+        return result;
+    }
+}
+```
+
+### 🔄 MediatR Pipeline Behaviors
+
+The system implements several cross-cutting concerns using MediatR pipeline behaviors:
+
+#### Validation Behavior
+```csharp
+public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    // FluentValidation integration
+    // Automatic request validation
+    // Error handling and response formatting
+}
+```
+
+#### Logging Behavior
+```csharp
+public class LoggingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>
+{
+    // Request/Response logging
+    // Performance monitoring
+    // Audit trail creation
+}
+```
+
+#### Caching Behavior
+```csharp
+public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : IRequest<TResponse>, ICacheableRequest
+{
+    // Redis caching for queries
+    // Cache invalidation strategies
+    // Performance optimization
+}
+```
+
+### 📁 Project Structure
+
+```
+SkyReserve.Application/
+├── Commands/
+│   ├── Bookings/
+│   │   ├── CreateBooking/
+│   │   │   ├── CreateBookingCommand.cs
+│   │   │   ├── CreateBookingCommandHandler.cs
+│   │   │   └── CreateBookingCommandValidator.cs
+│   │   └── CancelBooking/
+│   └── Users/
+├── Queries/
+│   ├── Flights/
+│   │   ├── SearchFlights/
+│   │   │   ├── SearchFlightsQuery.cs
+│   │   │   ├── SearchFlightsQueryHandler.cs
+│   │   │   └── FlightSearchDto.cs
+│   │   └── GetFlightDetails/
+│   └── Bookings/
+├── Common/
+│   ├── Behaviors/
+│   │   ├── ValidationBehavior.cs
+│   │   ├── LoggingBehavior.cs
+│   │   └── CachingBehavior.cs
+│   ├── Interfaces/
+│   └── Models/
+└── DependencyInjection.cs
+```
+
+### 🎯 Implementation Examples
+
+#### Controller Integration
+```csharp
+[ApiController]
+[Route("api/[controller]")]
+public class BookingsController : ControllerBase
+{
+    private readonly IMediator _mediator;
+
+    public BookingsController(IMediator mediator)
+    {
+        _mediator = mediator;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<BookingResult>> CreateBooking(CreateBookingCommand command)
+    {
+        var result = await _mediator.Send(command);
+        return Ok(result);
+    }
+
+    [HttpGet("search")]
+    public async Task<ActionResult<PagedResult<BookingDto>>> SearchBookings([FromQuery] SearchBookingsQuery query)
+    {
+        var result = await _mediator.Send(query);
+        return Ok(result);
+    }
+}
+```
+
+#### Dependency Injection Setup
+```csharp
+public static class DependencyInjection
+{
+    public static IServiceCollection AddApplication(this IServiceCollection services)
+    {
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
+        });
+
+        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+        
+        return services;
+    }
+}
+```
+
+### 🚀 Benefits of CQRS + MediatR
+
+#### ✅ **Separation of Concerns**
+- Clear distinction between read and write operations
+- Different optimization strategies for commands vs queries
+- Independent scaling of read/write workloads
+
+#### ✅ **Maintainability**
+- Single responsibility handlers
+- Easier unit testing
+- Clear request/response contracts
+
+#### ✅ **Performance**
+- Optimized query models for different views
+- Caching strategies for read operations
+- Asynchronous processing capabilities
+
+#### ✅ **Scalability**
+- Horizontal scaling of read replicas
+- Event-driven architecture support
+- Microservices-ready design
+
+#### ✅ **Cross-Cutting Concerns**
+- Centralized validation, logging, and caching
+- Consistent error handling
+- Audit trail implementation
+
+### 🔧 Key Features Implemented
+
+- **FluentValidation Integration**: Automatic request validation
+- **AutoMapper Integration**: Object-to-object mapping in handlers
+- **Redis Caching**: Query result caching for performance
+- **Audit Logging**: Request/response logging for all operations
+- **Error Handling**: Centralized exception handling and response formatting
+- **Performance Monitoring**: Request duration tracking and metrics
+- **Notification Events**: Automatic event publishing after successful commands
+
+### 📊 Performance Optimizations
+
+- **Query Optimization**: Specialized DTOs for different read scenarios
+- **Caching Strategy**: Redis-based caching with intelligent invalidation
+- **Database Optimization**: Read replicas for query operations
+- **Elasticsearch Integration**: Full-text search capabilities
+- **Async Processing**: Non-blocking operations with cancellation token support
+
+## ?? AWS SQS Notification Flow
+
+SkyReserve implements an efficient asynchronous notification system using AWS SQS for reliable message processing and delivery.
+
+### 🏗️ Architecture Overview
+
+The notification system follows a **Producer-Consumer pattern** with reliable message queuing:
+
+#### 🔧 **Enhanced ASCII Diagram**
+```
+┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
+│   🌐 API Layer      │ -> │   📤 Producer       │ -> │   ☁️ AWS SQS        │
+│   • Controllers     │    │   • Creates Records │    │   • Message Queue   │
+│   • Business Logic  │    │   • Templates       │    │   • Retry Logic     │
+│   • Event Triggers  │    │   • Channel Routing │    │   • Dead Letter Q   │
+└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
+            │                         │                           │
+            │                         ▼                           ▼
+            │              ┌─────────────────────┐    ┌─────────────────────┐
+            │              │   🗄️ Database       │    │   ⚙️ Consumer        │
+            │              │   • Notifications   │    │   • Background Svc  │
+            │              │   • Status Tracking │    │   • Message Proc.   │
+            │              │   • Audit Trail     │    │   • Error Handling  │
+            │              └─────────────────────┘    └─────────────────────┘
+            │                                                    │
+            │                                                    ▼
+            │                                         ┌─────────────────────┐
+            │                                         │   📡 Delivery       │
+            │                                         │   ├─ 📨 AWS SES     │
+            │                                         │   │   • HTML Email  │
+            └─────────────────────────────────────────┤   └─ 💬 Twilio      │
+                          Status Updates              │       • SMS         │
+                                                      └─────────────────────┘
+```
+
+#### 🎯 **Component Details**
+
+<details>
+<summary><strong>🌐 API Layer Components</strong></summary>
+
+- **Controllers**: Booking, Auth, User management endpoints
+- **Middleware**: Request validation, authentication, logging  
+- **Business Logic**: Domain rules, validation, event triggers
+- **Event Triggers**: Automatic notification creation on business events
+
+</details>
+
+<details>
+<summary><strong>📤 Notification Producer</strong></summary>
+
+- **Template Engine**: HTML/Text template processing with parameters
+- **Channel Router**: Determines delivery method (Email/SMS) based on user preferences
+- **Database Writer**: Persists notification records with JSON payloads
+- **SQS Publisher**: Sends messages with proper attributes and routing
+
+</details>
+
+<details>
+<summary><strong>☁️ AWS SQS Queue</strong></summary>
+
+- **Message Durability**: Persists messages until successful processing
+- **Visibility Timeout**: Prevents duplicate processing (30s default)
+- **Dead Letter Queue**: Handles messages that fail repeatedly (3 retries)
+- **Long Polling**: Efficient message retrieval with 20s wait time
+
+</details>
+
+<details>
+<summary><strong>⚙️ Background Consumer</strong></summary>
+
+- **Polling Service**: Continuously monitors SQS for new messages
+- **Message Processor**: Extracts, validates, and routes notifications  
+- **Status Manager**: Updates database with processing states
+- **Error Handler**: Manages failures, retries, and comprehensive logging
+
+</details>
+
+<details>
+<summary><strong>📡 Delivery Services</strong></summary>
+
+- **📨 AWS SES**: HTML emails, bounce handling, reputation management
+- **💬 Twilio SMS**: International SMS, delivery receipts, status callbacks
+- **🔄 Retry Logic**: Automatic retry with exponential backoff
+- **📊 Analytics**: Delivery rates, failure tracking, performance metrics
+
+</details>
+
+### Notification Types Supported
+
+- **Booking Confirmation**: When a flight booking is created/confirmed
+- **User Registration**: Welcome message for new users
+- **Login Notification**: Security alerts for user logins
+- **Email Confirmation**: Email verification codes
+- **Password Reset**: Password reset tokens
+
+### Message Flow Process
+
+#### 1. **Notification Trigger** (Producer Phase)
+When a business event occurs (booking, registration, etc.)
+
+#### 2. **Database Storage**
+- Notification record is created in the database with status `"Pending"`
+- Template parameters are processed and stored as JSON payload
+- Appropriate notification channel is determined (EMAIL/SMS)
+
+#### 3. **SQS Message Production**
+- Message is sent to AWS SQS queue with notification metadata
+- Message attributes include `NotificationId` and `MessageType`
+- Ensures reliable queuing with built-in retry mechanisms
+
+#### 4. **Background Processing** (Consumer Phase)
+The `NotificationBackgroundService` continuously polls SQS
+
+#### 5. **Message Processing**
+For each received message:
+- Extract notification ID from SQS message
+- Retrieve notification details from database
+- Validate notification status (must be "Pending")
+- Update status to "Processing"
+
+#### 6. **Notification Delivery**
+Using the Factory Pattern:
+- **Email notifications**: Delivered via AWS SES
+- **SMS notifications**: Delivered via Twilio
+- Both support HTML templates and personalization
+
+#### 7. **Status Management**
+- Success: Status updated to `"Sent"` with timestamp
+- Failure: Status updated to `"Failed"` with error details
+- SQS message is deleted after processing
+
+
+### Benefits of This Approach
+
+? **Reliability**: Messages are persisted in SQS until successfully processed  
+? **Scalability**: Can handle high volumes of notifications asynchronously  
+? **Fault Tolerance**: Failed messages can be retried or sent to dead letter queue  
+? **Decoupling**: API responses aren't delayed by notification processing  
+? **Monitoring**: Full visibility into notification status and delivery  
+? **Multi-Channel**: Supports both email and SMS with unified interface  
+
+### Error Handling & Retry Logic
+
+- **Message Visibility**: Failed messages become visible again for retry
+- **Dead Letter Queue**: Messages that fail multiple times are moved to DLQ
+- **Database Tracking**: All notification attempts are logged with status
+- **Exponential Backoff**: Built-in SQS retry mechanisms
+
+## ??? Database Schema
+
+### Core Entities
+
+- **Users & Authentication**
+  - `ApplicationUser`: User accounts
+  - `ApplicationRole`: User roles
+  - `RefreshToken`: JWT refresh tokens
+
+- **Flight Management**
+  - `Flight`: Flight information
+  - `Airport`: Airport details
+  - `Seat`: Aircraft seating
+  - `Price`: Dynamic pricing
+
+- **Booking System**
+  - `Booking`: Reservation records
+  - `Passenger`: Passenger information
+  - `Payment`: Payment transactions
+
+- **Additional Features**
+  - `Review`: Flight reviews
+  - `Notification`: System notifications
+
+## ?? Testing
+
+Run the test suite:
+
+```bash
+# Run all tests
+dotnet test
+
+# Run with coverage
+dotnet test --collect:"XPlat Code Coverage"
+
+# Run specific test project
+dotnet test SkyReserve.Test
+```
+
+## ?? Deployment
+
+### Docker Support
+
+The application can be containerized using Docker:
+
+```dockerfile
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+COPY . .
+RUN dotnet restore
+RUN dotnet publish -c Release -o /app
+
+# Runtime stage  
+FROM mcr.microsoft.com/dotnet/aspnet:9.0
+WORKDIR /app
+COPY --from=build /app .
+EXPOSE 80
+ENTRYPOINT ["dotnet", "SkyReserve.API.dll"]
+```
+
+
+## ?? License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.

@@ -1,0 +1,5 @@
+{
+  "BookingConfirmation": "Booking confirmed! Ref: {{bookingRef}}, Amount: ${{totalAmount}}. Thank you for choosing SkyReserve!",
+  "LoginNotification": "Hello {{firstName}}! You just logged into SkyReserve at {{loginTime}} UTC. If this wasn't you, contact support.",
+  "WelcomeRegistration": "Welcome to SkyReserve, {{firstName}}! Thanks for registering. Start exploring flights and book your next adventure with us!"
+}
